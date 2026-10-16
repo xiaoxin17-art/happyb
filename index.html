@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            height: 100vh;
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 烟花画布 底层 */
+        #fireworks{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            pointer-events:none;
+            z-index:-1;
+        }
+        /* 彩片画布 */
+        #confetti{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            pointer-events:none;
+            z-index:-1;
+        }
+
+        /* 开始按钮 */
+        #startBtn{
+            padding: 16px 36px;
+            font-size: 24px;
+            border: none;
+            border-radius: 50px;
+            background: linear-gradient(45deg,#ff7777,#ffcc44);
+            color:#fff;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff9944;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+        #startBtn:hover{
+            transform: scale(1.08);
+            box-shadow:0 0 25px #ff7744;
+        }
+
+        /* 多行打字容器 */
+        .type-wrap {
+            text-align:center;
+            margin-bottom: 40px;
+            opacity:0;
+            transform: translateY(20px);
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+        .type-wrap.show{
+            opacity:1;
+            transform: translateY(0);
+        }
+        .line{
+            font-size: 3rem;
+            color: #ffd700;
+            text-shadow: 0 0 10px #ff8800,0 0 20px #ff4400;
+            margin:12px 0;
+            min-height:3.5rem;
+        }
+        .line-text{
+            animation: shine 1.5s infinite alternate;
+        }
+        @keyframes shine {
+            from {opacity: 0.8;transform: scale(1);}
+            to {opacity:1;transform: scale(1.05);}
+        }
+        /* 闪烁光标 */
+        .cursor{
+            display:inline-block;
+            width:4px;
+            height: 3rem;
+            background-color:#ffd700;
+            animation: blink 0.7s infinite;
+            vertical-align: bottom;
+        }
+        @keyframes blink{
+            0%,100%{opacity:1;}
+            50%{opacity:0;}
+        }
+
+        /* 蛋糕容器，初始隐藏 */
+        .cake {
+            position: relative;
+            width: 280px;
+            height: 240px;
+            opacity:0;
+            transform: translateY(30px);
+            transition: opacity 1s ease, transform 1s ease;
+        }
+        .cake.show{
+            opacity:1;
+            transform: translateY(0);
+        }
+        .cake-body {
+            width: 260px;
+            height: 110px;
+            background: #f8b195;
+            border-radius: 0 0 12px 12px;
+            position: absolute;
+            bottom:0;
+            left:10px;
+        }
+        .cake-top {
+            width: 280px;
+            height:70px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            bottom:90px;
+        }
+        /* 蛋糕糖粒 */
+        .sprinkle{
+            position:absolute;
+            width:6px;
+            height:6px;
+            border-radius:50%;
+        }
+        /* 蜡烛通用样式 */
+        .candle{
+            width:8px;
+            height:45px;
+            background:#fff;
+            position:absolute;
+            bottom:140px;
+            border-radius:2px;
+        }
+        .flame{
+            width:14px;
+            height:22px;
+            background:radial-gradient(#ffdd00,#ff4400);
+            border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+            position:absolute;
+            animation: flicker 0.3s infinite alternate;
+        }
+        @keyframes flicker{
+            0%{transform:scaleY(1);opacity:0.9;}
+            100%{transform:scaleY(1.2);opacity:1;}
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworks"></canvas>
+    <canvas id="confetti"></canvas>
+
+    <!-- 开始按钮 -->
+    <button id="startBtn">button</button>
+
+    <!-- 多行打字机区域 -->
+    <div class="type-wrap">
+        <div class="line">
+            <span class="line-text line1"></span>
+        </div>
+        <div class="line">
+            <span class="line-text line2"></span>
+            <span class="cursor">|</span>
+        </div>
+    </div>
+
+    <!-- 蛋糕：多根蜡烛 + 糖粒 -->
+    <div class="cake">
+        <div class="cake-top"></div>
+        <div class="cake-body"></div>
+        <!-- 糖粒 -->
+        <div class="sprinkle" style="top:80px;left:30px;background:#ff4444"></div>
+        <div class="sprinkle" style="top:95px;left:70px;background:#44ddff"></div>
+        <div class="sprinkle" style="top:75px;left:110px;background:#44ff88"></div>
+        <div class="sprinkle" style="top:90px;left:160px;background:#ffdd00"></div>
+        <div class="sprinkle" style="top:82px;left:210px;background:#ff66ff"></div>
+        <div class="sprinkle" style="top:98px;left:240px;background:#ff9944"></div>
+        <!-- 蜡烛1 -->
+        <div class="candle" style="left:40px"></div>
+        <div class="flame" style="left:37px;bottom:182px"></div>
+        <!-- 蜡烛2 -->
+        <div class="candle" style="left:100px"></div>
+        <div class="flame" style="left:97px;bottom:182px"></div>
+        <!-- 蜡烛3 -->
+        <div class="candle" style="left:160px"></div>
+        <div class="flame" style="left:157px;bottom:182px"></div>
+        <!-- 蜡烛4 -->
+        <div class="candle" style="left:220px"></div>
+        <div class="flame" style="left:217px;bottom:182px"></div>
+    </div>
+
+    <!-- 背景音乐 -->
+    <audio id="bgMusic" loop>
+        <source src="https://assets.mixkit.co/sfx/preview/mixkit-happy-birthday-tune-piano-718.mp3" type="audio/mpeg">
+    
+
+<script>
+// ========== 烟花代码 ==========
+const canvas = document.getElementById('fireworks');
+const ctx = canvas.getContext('2d');
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+
+window.addEventListener('resize',()=>{
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+    confettiCanvas.width = w;
+    confettiCanvas.height = h;
+})
+
+class Particle{
+    constructor(x,y,color){
+        this.x = x;
+        this.y = y;
+        this.speedX = (Math.random()-0.5)*8;
+        this.speedY = (Math.random()-0.5)*8;
+        this.alpha = 1;
+        this.decay = 0.012;
+        this.color = color;
+    }
+    update(){
+        this.x += this.speedX;
+        this.y += this.speedY;
+        this.alpha -= this.decay;
+    }
+    draw(){
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,2,0,Math.PI*2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.restore();
+    }
+}
+let particles = [];
+const colors = ['#ff4444','#ffdd00','#44ddff','#44ff88','#ff66ff','#ff9944'];
+function createFirework(){
+    const x = Math.random() * w;
+    const y = Math.random() * h * 0.6;
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    for(let i=0;i<80;i++){
+        particles.push(new Particle(x,y,color));
+    }
+}
+function animate(){
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(0,0,w,h);
+    for(let i=particles.length-1;i>=0;i--){
+        const p = particles[i];
+        p.update();
+        p.draw();
+        if(p.alpha <= 0){
+            particles.splice(i,1);
+        }
+    }
+    requestAnimationFrame(animate);
+}
+animate();
+
+// ========== 彩带彩片特效 ==========
+const confettiCanvas = document.getElementById("confetti");
+const confettiCtx = confettiCanvas.getContext("2d");
+confettiCanvas.width = w;
+confettiCanvas.height = h;
+let confettiList = [];
+let confettiActive = false;
+
+class Confetti{
+    constructor(){
+        this.x = Math.random() * w;
+        this.y = -10;
+        this.size = Math.random()*6+4;
+        this.speedY = Math.random()*3+2;
+        this.speedX = (Math.random()-0.5)*2;
+        this.rotate = Math.random()*360;
+        this.rotateSpeed = (Math.random()-0.5)*8;
+        this.color = colors[Math.floor(Math.random()*colors.length)];
+    }
+    update(){
+        this.y += this.speedY;
+        this.x += this.speedX;
+        this.rotate += this.rotateSpeed;
+    }
+    draw(){
+        confettiCtx.save();
+        confettiCtx.translate(this.x,this.y);
+        confettiCtx.rotate(this.rotate * Math.PI/180);
+        confettiCtx.fillStyle = this.color;
+        confettiCtx.fillRect(-this.size/2,-this.size/2,this.size,this.size);
+        confettiCtx.restore();
+    }
+}
+function runConfetti(){
+    if(!confettiActive) return;
+    confettiCtx.clearRect(0,0,w,h);
+    if(Math.random()>0.4){
+        confettiList.push(new Confetti());
+    }
+    for(let i=confettiList.length-1;i>=0;i--){
+        let c = confettiList[i];
+        c.update();
+        c.draw();
+        if(c.y > h){
+            confettiList.splice(i,1);
+        }
+    }
+    requestAnimationFrame(runConfetti);
+}
+
+// ========== 多行打字机配置【修改这里的文字】 ==========
+const textLines = [
+    "祝张晶宇21岁生日快乐 🎂",
+    "愿你岁岁无忧，万事皆甜✨ 祝你生命不息，像树一样⭐,无限延伸自己的人生脉络,枝繁叶茂"
+];
+const line1Dom = document.querySelector('.line1');
+const line2Dom = document.querySelector('.line2');
+const typeWrap = document.querySelector('.type-wrap');
+
+let lineIndex = 0;
+let charIndex = 0;
+const typeSpeed = 180;    //打字速度，越小越快
+const linePause = 700;    //两行之间停顿毫秒
+
+function typeWriter(){
+    // 当前行
+    const currentText = textLines[lineIndex];
+    if(charIndex < currentText.length){
+        if(lineIndex === 0){
+            line1Dom.textContent += currentText.charAt(charIndex);
+        }else{
+            line2Dom.textContent += currentText.charAt(charIndex);
+        }
+        charIndex++;
+        setTimeout(typeWriter, typeSpeed);
+    }else{
+        // 当前行打完，换下一行
+        lineIndex++;
+        charIndex = 0;
+        if(lineIndex < textLines.length){
+            setTimeout(typeWriter, linePause);
+        }
+    }
+}
+
+// ========== 页面时序逻辑 ==========
+const startBtn = document.getElementById('startBtn');
+const cake = document.querySelector('.cake');
+const bgMusic = document.getElementById('bgMusic');
+
+startBtn.onclick = function(){
+    startBtn.style.display = 'none';
+    typeWrap.classList.add('show');
+    typeWriter();
+
+    // 全部文字打完之后，再等一会，出现蛋糕和音乐烟花
+    // 计算：总行数*文字长度*打字速度 + 行停顿
+    const totalWait = textLines[0].length * typeSpeed + linePause + textLines[1].length * typeSpeed + 800;
+    setTimeout(()=>{
+        cake.classList.add('show');
+        bgMusic.play();
+        setInterval(createFirework,700);
+        confettiActive = true;
+        runConfetti();
+    }, totalWait);
+}
+// 点击屏幕额外烟花
+canvas.onclick = createFirework;
+</script>
+</body>
+</html>
